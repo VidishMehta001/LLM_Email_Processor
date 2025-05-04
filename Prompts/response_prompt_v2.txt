@@ -1,0 +1,8 @@
+
+            Generate a response to the following email based on the classification: inquiry
+
+            Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
+            
+            Response should comprise the text body of the email. 
+            Please provide the response in a json format (dictionary) with key 'email_body': response.
+            

@@ -1,0 +1,5 @@
+
+            Generate a response to the following email based on the classification: The email should be classified as **inquiry**. This is because the sender is seeking to explore a potential partnership and is asking to schedule a call to discuss further, which indicates a request for information or discussion rather than a complaint, feedback, support request, or other types of correspondence.
+
+            Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
+            

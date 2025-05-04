@@ -1,82 +1,21 @@
-# LLM Integration Exercise: Email Classification and Automation
+# LLM based Email Classifier
 
-## Overview
-In this exercise, you'll build a system that uses Large Language Models (LLMs) to classify incoming emails and automate responses based on the classification. This tests your ability to:
-- Integrate LLMs into a Python workflow
-- Design and refine prompts for reliable classification
-- Implement error handling and reliability measures
-- Create automated response systems
+## Acknowledgment
+I would like to thank Cadre.AI team for providing me this assignment - amazed by the work the founding team has done in delivering AI powered solutions across various industries. More on them can be found here.
 
-## Setup and Requirements
+## Project Context
+As part of the Cadre.AI assignment, I am tasked with building an email classification and automation system using Large Language Models (LLMs). The system is required to:
 
-### Environment Setup
-1. Create a new virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate
-```
+- Classify emails into one of five categories:  
+  `complaint`, `inquiry`, `feedback`, `support_request`, or `other`
+- Generate appropriate responses for each classified email
+- Log results and simulate downstream actions (like ticketing, logging, etc.)
+---
 
-2. Install required packages:
-```bash
-pip install -r requirements.txt
-```
-
-### Requirements File (requirements.txt)
-```
-openai>=1.3.0
-pandas>=2.0.0
-python-dotenv>=1.0.0
-```
-
-### Configuration
-1. Create a `.env` file in your project root:
-```
-OPENAI_API_KEY=your_api_key_here
-```
-
-## Exercise Structure
-The exercise is divided into four main parts:
-
-### Part 1: Email Data Processing (10 minutes)
-- Load and validate the provided mock email data
-- Create functions to extract email data
-- Implement basic data validation
-
-### Part 2: LLM Integration (20 minutes)
-- Design classification prompts
-- Implement API calls
-- Create classification system
-
-### Part 3: Prompt Engineering (20 minutes)
-- Analyze classification accuracy
-- Identify and handle edge cases
-- Document prompt iterations and improvements
-
-### Part 4: Response Automation (10 minutes)
-- Create response generation system
-- Implement category-specific handling
-- Add appropriate error handling and logging
-
-## Starter Code
+## Dataset
+The dataset consists of sample emails from different categories - complaint, inquiry, feedback, support_request and other. The email classifier is to classify the sample emails correctly, generate a response and process the incoming request. Below is the sample dataset that needs to be classified:
 
 ```python
-# Configuration and imports
-import os
-import json
-import pandas as pd
-from typing import Dict, List, Optional, Tuple
-from dotenv import load_dotenv
-from openai import OpenAI
-from datetime import datetime
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Load environment variables
-load_dotenv()
-
 # Sample email dataset
 sample_emails = [
     {
@@ -116,201 +55,241 @@ sample_emails = [
     }
 ]
 
+```
+## Email Classification - prompts
 
-class EmailProcessor:
-    def __init__(self):
-        """Initialize the email processor with OpenAI API key."""
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+I started with the basic email classification prompt as shown below:
 
-        # Define valid categories
-        self.valid_categories = {
-            "complaint", "inquiry", "feedback",
-            "support_request", "other"
-        }
+```text
+Imagine you are a email classifier. Please classify the email below according to the provided categories.
 
-    def classify_email(self, email: Dict) -> Optional[str]:
-        """
-        Classify an email using LLM.
-        Returns the classification category or None if classification fails.
-        
-        TODO: 
-        1. Design and implement the classification prompt
-        2. Make the API call with appropriate error handling
-        3. Validate and return the classification
-        """
-        pass
+Provided categories: {'complaint', 'feedback', 'support_request', 'other', 'inquiry'}
 
-    def generate_response(self, email: Dict, classification: str) -> Optional[str]:
-        """
-        Generate an automated response based on email classification.
-        
-        TODO:
-        1. Design the response generation prompt
-        2. Implement appropriate response templates
-        3. Add error handling
-        """
-        pass
+Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
+```
+The challenge with this prompt was that the response was provided in the free text format. Thus there was a need to standardize the output to a fixed format for easier processing of the downstream information. Hence, I developed a version 2 with response standardization instruction for the LLM model. Below is the version 2 of the model
+```text
+Imagine you are a email classifier. Please classify the email below according to the provided categories.
 
+Provided categories: {'other', 'inquiry', 'complaint', 'feedback', 'support_request'}
 
-class EmailAutomationSystem:
-    def __init__(self, processor: EmailProcessor):
-        """Initialize the automation system with an EmailProcessor."""
-        self.processor = processor
-        self.response_handlers = {
-            "complaint": self._handle_complaint,
-            "inquiry": self._handle_inquiry,
-            "feedback": self._handle_feedback,
-            "support_request": self._handle_support_request,
-            "other": self._handle_other
-        }
+Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
 
-    def process_email(self, email: Dict) -> Dict:
-        """
-        Process a single email through the complete pipeline.
-        Returns a dictionary with the processing results.
-        
-        TODO:
-        1. Implement the complete processing pipeline
-        2. Add appropriate error handling
-        3. Return processing results
-        """
-        pass
+Provide a JSON response with key as classification and value as the valid category classified to. Please only provide this and no other writeups.
+```
+After updating the response format to json object, I was able to correctly classify the email. However, I noticed an issue with the classification of inquiry against others. The LLM misclassified other as an inquiry as there was no instruction for the LLM classifier to segregate between customers and internal teams, external collaborators or partnerships. Hence, I updated the prompt to include those instructions:
+```text
+Imagine you are a email classifier. Please classify the email below according to the provided categories.
 
-    def _handle_complaint(self, email: Dict):
-        """
-        Handle complaint emails.
-        TODO: Implement complaint handling logic
-        """
-        pass
+Provided categories: {'other', 'complaint', 'inquiry', 'feedback', 'support_request'}
 
-    def _handle_inquiry(self, email: Dict):
-        """
-        Handle inquiry emails.
-        TODO: Implement inquiry handling logic
-        """
-        pass
+Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
 
-    def _handle_feedback(self, email: Dict):
-        """
-        Handle feedback emails.
-        TODO: Implement feedback handling logic
-        """
-        pass
+Provide a JSON format (dictinonary) with key as classification and value as the valid category classified to. Please only provide this and no other writeups.
+If the email is not from a customer, it belong to other category - for instance if the email is from internal teams, external collaborators or partnerships.
+```
+ Another issue I realised is that the sample set provided is small and does not cover the spectrum of email - i.e. from mild disappointment and reporting to extreme frustration and aggression for a complaint email. Hence I developed a new synthetic email generator that was able to provide the spectrum of sample email pre-classified. This would allow for the LLM to be more robust. The code for the synthetic email generator is provided in the synthetic_email.py file. The final email classification prompt provided included the synthetic generated dataset as shown below. 
+ 
+  ```text
+Imagine you are a email classifier. Please classify the email below according to the provided categories.
 
-    def _handle_support_request(self, email: Dict):
-        """
-        Handle support request emails.
-        TODO: Implement support request handling logic
-        """
-        pass
+Provided categories: {'feedback', 'support_request', 'other', 'inquiry', 'complaint'}
 
-    def _handle_other(self, email: Dict):
-        """
-        Handle other category emails.
-        TODO: Implement handling logic for other categories
-        """
-        pass
+Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
 
-# Mock service functions
-def send_complaint_response(email_id: str, response: str):
-    """Mock function to simulate sending a response to a complaint"""
-    logger.info(f"Sending complaint response for email {email_id}")
-    # In real implementation: integrate with email service
+Please find several examples with category provided in the "category" key: [{'id': 'gen-complaint-1', 'from': 'john.doe@example.com', 'body': 'Dear Customer Support, I hope this message finds you well. I am writing to express my disappointment regarding the recent purchase I made from your store (Order ID: 98765). The product arrived later than expected, and when it finally did arrive, it was not functioning as advertised. I have been a loyal customer for years and have always appreciated the quality of your products and services. However, this experience has left me feeling quite frustrated. I attempted to reach out to customer service last week but did not receive a timely response. I would appreciate it if you could provide a prompt resolution to this issue. I am hoping for a replacement product or a full refund at this point. Thank you for your attention to this matter. I look forward to your swift response. Best regards, John Doe', 'timestamp': '2023-10-12T14:30:00Z', 'category': 'complaint'}, {'id': 'gen-complaint-2', 'from': 'jane.doe@example.com', 'body': 'Dear Customer Service, I am writing to express my disappointment regarding my recent order (Order ID: 789456). I placed the order over two weeks ago, and I was promised delivery within 5-7 business days. However, it is still missing, and I have received no updates despite reaching out multiple times. This lack of communication is unacceptable. I expected better from a company of your reputation. I rely on your products for my work, and this delay is causing significant inconvenience. Please resolve this issue immediately and provide me with a status update. Thank you, Jane Doe', 'timestamp': '2023-10-18T14:32:00Z', 'category': 'complaint'}, {'id': 'gen-complaint-3', 'from': 'james.smith@email.com', 'body': 'Dear Customer Service, I am writing to express my extreme frustration with the product I recently purchased from your website. I ordered a high-end blender on October 1st, and it has already stopped working after only a couple of uses. This is absolutely unacceptable, especially considering I paid a premium price for it. I expected better quality from your brand. Furthermore, I have tried reaching out to your customer service multiple times but have received no response. This neglect is infuriating. I demand a full refund and an explanation for the poor quality of your products. I hope to hear back from you soon, otherwise, I will have to escalate this issue further. Best regards, James Smith', 'timestamp': '2023-10-20T14:32:00Z', 'category': 'complaint'}, {'id': 'gen-complaint-4', 'from': 'john.doe@example.com', 'body': 'Dear Customer Service Team, I am writing to express my extreme frustration with the service I have received regarding my recent order (Order ID: 987654321). I placed the order over two weeks ago, and I was promised delivery within five business days. However, not only has the delivery been delayed, but I have also received no communication whatsoever regarding this issue. This lack of accountability is unacceptable. I rely on timely deliveries for my business, and I had made arrangements based on your promised timeline. I expected much more from your company, and I am now left in a frustrating position. Please rectify this situation immediately. I expect a clear update on my order status and an explanation for this failure. Thank you, John Doe', 'timestamp': '2023-10-15T14:38:00Z', 'category': 'complaint'}, {'id': 'gen-inquiry-1', 'from': 'jane.doe@example.com', 'body': "Dear Customer Service, I hope this message finds you well. I placed an order (Order ID: 987654321) on September 15, 2023, but I haven't received a shipping confirmation yet. Could you please provide me with an update on the status of my order? Additionally, I wanted to inquire about the return process. If the order arrives and I find that it's not what I expected, what steps do I need to follow to return it? Are there any specific guidelines or forms I need to complete? Thank you for your assistance! Best regards, Jane Doe", 'timestamp': '2023-10-05T14:30:00Z', 'category': 'inquiry'}, {'id': 'gen-inquiry-2', 'from': 'jane.doe@example.com', 'body': 'Dear Customer Service, I hope this message finds you well. I am interested in purchasing the wireless headphones listed on your website, however, I would like to know if they are currently in stock. Additionally, could you provide me with information regarding the estimated shipping times to New York City? Lastly, if I were to order multiple pairs, would there be any discounts available? Thank you for your assistance! Best regards, Jane Doe', 'timestamp': '2023-10-15T14:30:00Z', 'category': 'inquiry'}, {'id': 'gen-inquiry-3', 'from': 'jane.smith@example.com', 'body': 'Hello, I hope this message finds you well. I am interested in purchasing the new wireless headphones featured on your website. I would like to know if they are currently in stock. Additionally, can you provide me with information on the available shipping options and estimated delivery times? Furthermore, if I place my order today, is there any chance I could receive it before the weekend? Thank you for your assistance! Best regards, Jane Smith', 'timestamp': '2023-10-15T14:32:00Z', 'category': 'inquiry'}, {'id': 'gen-inquiry-4', 'from': 'jane.doe@example.com', 'body': "Hi Team, I hope this message finds you well. I am interested in purchasing a couple of items from your website, specifically the Eco-Friendly Water Bottle and the Portable Blender. However, I wanted to confirm if both products are currently in stock. Additionally, I would like to know what shipping options are available for these items, especially if you offer express shipping. I'm planning to gift them for an upcoming occasion, so a timely delivery would be greatly appreciated. Thank you for your assistance! Best regards, Jane Doe", 'timestamp': '2023-10-12T14:32:00Z', 'category': 'inquiry'}, {'id': 'gen-feedback-1', 'from': 'jane.doe@example.com', 'body': "Dear Team, I recently purchased your new eco-friendly water bottle, and I just wanted to take a moment to share my feedback. First of all, I absolutely love the design! It's sleek, stylish, and fits perfectly in my bag. The insulated feature keeps my drinks cold for hours, which is perfect for my hikes. However, I did notice that the lid can sometimes be a bit tricky to open with wet hands. I would suggest making it easier to grip, especially for those of us who are outdoorsy. Overall, I�m very happy with my purchase and appreciate your commitment to sustainability. Keep up the great work! Best regards, Jane Doe", 'timestamp': '2023-10-05T14:23:45Z', 'category': 'feedback'}, {'id': 'gen-feedback-2', 'from': 'jane.doe@example.com', 'body': "Dear Team, I just wanted to take a moment to express how truly impressed I am with the XYZ product I recently purchased. The quality is exceptional, and it's made a noticeable difference in my daily routine. However, I did notice that the user manual could be more detailed, particularly in the setup instructions. A few additional visuals could go a long way in helping first-time users navigate. Overall, I'm extremely satisfied with my purchase and will definitely recommend it to friends and family. Thank you for such a great product! Best regards, Jane Doe", 'timestamp': '2023-10-12T14:30:00Z', 'category': 'feedback'}, {'id': 'gen-feedback-3', 'from': 'happycustomer@example.com', 'body': "Dear Team, I recently purchased your product, and I must say, I am absolutely thrilled with its performance! The quality is top-notch, and it has exceeded my expectations in every way. It's clear that great care was taken in its design. That said, I do have a couple of suggestions that I believe could enhance the user experience even further. Firstly, it would be fantastic if you could include a more detailed user manual or setup guide for those who are a bit less tech-savvy. Additionally, a mobile app integration could elevate the overall usability. Thank you for creating such an amazing product! I can't wait to see what you come up with next. Best regards, Jane Doe", 'timestamp': '2023-10-15T14:35:22Z', 'category': 'feedback'}, {'id': 'gen-feedback-4', 'from': 'jane.doe@example.com', 'body': "Hi Team, I recently purchased your new eco-friendly water bottle, and I just wanted to take a moment to share my feedback. First of all, I absolutely love the design! It's stylish and fits perfectly in my car cup holder. The material feels durable and the insulating feature works exceptionally well. However, I did encounter a small issue: the cap sometimes feels a bit tight when opening. I believe a slight adjustment could make it easier to handle. Overall, I�m really impressed with the quality of the product and the thoughtfulness behind its design. Keep up the fantastic work! Best, Jane", 'timestamp': '2023-10-04T14:32:00Z', 'category': 'feedback'}, {'id': 'gen-support_request-1', 'from': 'jane.doe@example.com', 'body': 'Dear Support Team, I hope this message finds you well. I am currently having trouble logging into my account. I have tried resetting my password, but I am still unable to access my account. Could you please assist me with this? If there are any steps I need to follow, do let me know. Thank you for your help! Best regards, Jane Doe', 'timestamp': '2023-10-10T14:30:00Z', 'category': 'support_request'}, {'id': 'gen-support_request-2', 'from': 'jane.doe@example.com', 'body': 'Hi Support Team, I hope you can help me. I am having trouble accessing my account. I forgot my password, and when I try to reset it, I don�t receive any email in my inbox. I�ve checked my spam folder too. Could you please assist me in recovering my account? If you need any further information from my side, please let me know. Thank you for your help! Best regards, Jane Doe', 'timestamp': '2023-10-05T14:32:00Z', 'category': 'support_request'}, {'id': 'gen-support_request-3', 'from': 'jane.doe@example.com', 'body': "Dear Support Team, I hope this message finds you well. I am experiencing issues logging into my account. Every time I try to log in, it displays an error message saying 'Invalid credentials,' even though I am sure I am using the correct username and password. I have tried resetting my password, but I did not receive the reset email despite checking my inbox and spam folder. Could you please assist me in resolving this issue? Thank you for your help! Best regards, Jane Doe", 'timestamp': '2023-10-05T14:32:00Z', 'category': 'support_request'}, {'id': 'gen-support_request-4', 'from': 'jane.doe@example.com', 'body': "Dear Support Team, I hope this message finds you well. I'm having trouble logging into my account. I've tried resetting my password, but I still can�t access my profile. Can you please guide me on how to resolve this issue? Additionally, I would like to update my payment information but am unsure how to navigate the settings after I regain access. Thank you for your assistance! Best regards, Jane Doe", 'timestamp': '2023-10-13T14:30:00Z', 'category': 'support_request'}, {'id': 'gen-other-1', 'from': 'jane.doe@company.com', 'body': 'Hi Team, I hope this message finds you well. As we prepare for the upcoming project, I wanted to reach out to discuss potential collaboration opportunities that could enhance our efforts. Your expertise in this area would be invaluable, and I believe that by working together, we could achieve great results. Would you be available for a meeting next week to brainstorm ideas and align our goals? Please let me know your availability, and I will set up a time that works for everyone. Looking forward to your thoughts! Best regards, Jane Doe Partnership Manager Company Name', 'timestamp': '2023-10-15T09:45:00Z', 'category': 'other'}, {'id': 'gen-other-2', 'from': 'jane.doe@company.com', 'body': "Hi Team, I hope this message finds you well! I'm reaching out to discuss an exciting opportunity for potential collaboration on our upcoming marketing webinar scheduled for next month. We believe your expertise in digital marketing would add tremendous value to our event. We would love to discuss this further and explore how we can work together to make this event a success. Could we schedule a call next week to brainstorm ideas? Looking forward to your thoughts! Best regards, Jane Doe Marketing Manager Company Inc.", 'timestamp': '2023-10-01T10:30:00Z', 'category': 'other'}, {'id': 'gen-other-3', 'from': 'jane.doe@company.com', 'body': 'Dear Team, I hope this message finds you well. I wanted to reach out to discuss potential collaboration opportunities that could benefit both our teams. As we continue to explore innovative solutions in our respective fields, I believe joining forces could lead to some exciting developments. Please let me know your availability for a short meeting next week. I look forward to hearing from you soon. Best regards, Jane Doe Project Manager Company XYZ', 'timestamp': '2023-10-10T14:30:00Z', 'category': 'other'}, {'id': 'gen-other-4', 'from': 'john.doe@internalcompany.com', 'body': 'Dear Team, I hope this message finds you well. I would like to schedule a collaboration meeting next week to discuss our ongoing projects and potential opportunities for further partnership. Please let me know your availability for Tuesday or Thursday afternoon. Looking forward to hearing from you soon. Best regards, John Doe Project Manager Internal Company', 'timestamp': '2023-10-10T10:30:00Z', 'category': 'other'}]
 
+Provide a JSON format (dictinonary) with key as classification and value as the valid category classified to. Please only provide this and no other writeups.
+If the email is not from a customer, it belong to other category - for instance if the email is from internal teams, external collaborators or partnerships.
+ ```
+ The synthetic dataset provided in a more readable format. 
 
-def send_standard_response(email_id: str, response: str):
-    """Mock function to simulate sending a standard response"""
-    logger.info(f"Sending standard response for email {email_id}")
-    # In real implementation: integrate with email service
+ ```python
+# Synthetic email dataset
+[
+    {
+        "id": "gen-complaint-1",
+        "from": "john.doe@example.com",
+        "body": "Dear Customer Support, I hope this message finds you well. I am writing to express my disappointment regarding the recent purchase I made from your store (Order ID: 98765). The product arrived later than expected, and when it finally did arrive, it was not functioning as advertised. I have been a loyal customer for years and have always appreciated the quality of your products and services. However, this experience has left me feeling quite frustrated. I attempted to reach out to customer service last week but did not receive a timely response. I would appreciate it if you could provide a prompt resolution to this issue. I am hoping for a replacement product or a full refund at this point. Thank you for your attention to this matter. I look forward to your swift response. Best regards, John Doe",
+        "timestamp": "2023-10-12T14:30:00Z",
+        "category": "complaint"
+    },
+    {
+        "id": "gen-complaint-2",
+        "from": "jane.doe@example.com",
+        "body": "Dear Customer Service, I am writing to express my disappointment regarding my recent order (Order ID: 789456). I placed the order over two weeks ago, and I was promised delivery within 5-7 business days. However, it is still missing, and I have received no updates despite reaching out multiple times. This lack of communication is unacceptable. I expected better from a company of your reputation. I rely on your products for my work, and this delay is causing significant inconvenience. Please resolve this issue immediately and provide me with a status update. Thank you, Jane Doe",
+        "timestamp": "2023-10-18T14:32:00Z",
+        "category": "complaint"
+    },
+    {
+        "id": "gen-complaint-3",
+        "from": "james.smith@email.com",
+        "body": "Dear Customer Service, I am writing to express my extreme frustration with the product I recently purchased from your website. I ordered a high-end blender on October 1st, and it has already stopped working after only a couple of uses. This is absolutely unacceptable, especially considering I paid a premium price for it. I expected better quality from your brand. Furthermore, I have tried reaching out to your customer service multiple times but have received no response. This neglect is infuriating. I demand a full refund and an explanation for the poor quality of your products. I hope to hear back from you soon, otherwise, I will have to escalate this issue further. Best regards, James Smith",
+        "timestamp": "2023-10-20T14:32:00Z",
+        "category": "complaint"
+    },
+    {
+        "id": "gen-complaint-4",
+        "from": "john.doe@example.com",
+        "body": "Dear Customer Service Team, I am writing to express my extreme frustration with the service I have received regarding my recent order (Order ID: 987654321). I placed the order over two weeks ago, and I was promised delivery within five business days. However, not only has the delivery been delayed, but I have also received no communication whatsoever regarding this issue. This lack of accountability is unacceptable. I rely on timely deliveries for my business, and I had made arrangements based on your promised timeline. I expected much more from your company, and I am now left in a frustrating position. Please rectify this situation immediately. I expect a clear update on my order status and an explanation for this failure. Thank you, John Doe",
+        "timestamp": "2023-10-15T14:38:00Z",
+        "category": "complaint"
+    },
+    {
+        "id": "gen-inquiry-1",
+        "from": "jane.doe@example.com",
+        "body": "Dear Customer Service, I hope this message finds you well. I placed an order (Order ID: 987654321) on September 15, 2023, but I haven't received a shipping confirmation yet. Could you please provide me with an update on the status of my order? Additionally, I wanted to inquire about the return process. If the order arrives and I find that it's not what I expected, what steps do I need to follow to return it? Are there any specific guidelines or forms I need to complete? Thank you for your assistance! Best regards, Jane Doe",
+        "timestamp": "2023-10-05T14:30:00Z",
+        "category": "inquiry"
+    },
+    {
+        "id": "gen-inquiry-2",
+        "from": "jane.doe@example.com",
+        "body": "Dear Customer Service, I hope this message finds you well. I am interested in purchasing the wireless headphones listed on your website, however, I would like to know if they are currently in stock. Additionally, could you provide me with information regarding the estimated shipping times to New York City? Lastly, if I were to order multiple pairs, would there be any discounts available? Thank you for your assistance! Best regards, Jane Doe",
+        "timestamp": "2023-10-15T14:30:00Z",
+        "category": "inquiry"
+    },
+    {
+        "id": "gen-inquiry-3",
+        "from": "jane.smith@example.com",
+        "body": "Hello, I hope this message finds you well. I am interested in purchasing the new wireless headphones featured on your website. I would like to know if they are currently in stock. Additionally, can you provide me with information on the available shipping options and estimated delivery times? Furthermore, if I place my order today, is there any chance I could receive it before the weekend? Thank you for your assistance! Best regards, Jane Smith",
+        "timestamp": "2023-10-15T14:32:00Z",
+        "category": "inquiry"
+    },
+    {
+        "id": "gen-inquiry-4",
+        "from": "jane.doe@example.com",
+        "body": "Hi Team, I hope this message finds you well. I am interested in purchasing a couple of items from your website, specifically the Eco-Friendly Water Bottle and the Portable Blender. However, I wanted to confirm if both products are currently in stock. Additionally, I would like to know what shipping options are available for these items, especially if you offer express shipping. I'm planning to gift them for an upcoming occasion, so a timely delivery would be greatly appreciated. Thank you for your assistance! Best regards, Jane Doe",
+        "timestamp": "2023-10-12T14:32:00Z",
+        "category": "inquiry"
+    },
+    {
+        "id": "gen-feedback-1",
+        "from": "jane.doe@example.com",
+        "body": "Dear Team, I recently purchased your new eco-friendly water bottle, and I just wanted to take a moment to share my feedback. First of all, I absolutely love the design! It's sleek, stylish, and fits perfectly in my bag. The insulated feature keeps my drinks cold for hours, which is perfect for my hikes. However, I did notice that the lid can sometimes be a bit tricky to open with wet hands. I would suggest making it easier to grip, especially for those of us who are outdoorsy. Overall, I\u2019m very happy with my purchase and appreciate your commitment to sustainability. Keep up the great work! Best regards, Jane Doe",
+        "timestamp": "2023-10-05T14:23:45Z",
+        "category": "feedback"
+    },
+    {
+        "id": "gen-feedback-2",
+        "from": "jane.doe@example.com",
+        "body": "Dear Team, I just wanted to take a moment to express how truly impressed I am with the XYZ product I recently purchased. The quality is exceptional, and it's made a noticeable difference in my daily routine. However, I did notice that the user manual could be more detailed, particularly in the setup instructions. A few additional visuals could go a long way in helping first-time users navigate. Overall, I'm extremely satisfied with my purchase and will definitely recommend it to friends and family. Thank you for such a great product! Best regards, Jane Doe",
+        "timestamp": "2023-10-12T14:30:00Z",
+        "category": "feedback"
+    },
+    {
+        "id": "gen-feedback-3",
+        "from": "happycustomer@example.com",
+        "body": "Dear Team, I recently purchased your product, and I must say, I am absolutely thrilled with its performance! The quality is top-notch, and it has exceeded my expectations in every way. It's clear that great care was taken in its design. That said, I do have a couple of suggestions that I believe could enhance the user experience even further. Firstly, it would be fantastic if you could include a more detailed user manual or setup guide for those who are a bit less tech-savvy. Additionally, a mobile app integration could elevate the overall usability. Thank you for creating such an amazing product! I can't wait to see what you come up with next. Best regards, Jane Doe",
+        "timestamp": "2023-10-15T14:35:22Z",
+        "category": "feedback"
+    },
+    {
+        "id": "gen-feedback-4",
+        "from": "jane.doe@example.com",
+        "body": "Hi Team, I recently purchased your new eco-friendly water bottle, and I just wanted to take a moment to share my feedback. First of all, I absolutely love the design! It's stylish and fits perfectly in my car cup holder. The material feels durable and the insulating feature works exceptionally well. However, I did encounter a small issue: the cap sometimes feels a bit tight when opening. I believe a slight adjustment could make it easier to handle. Overall, I\u2019m really impressed with the quality of the product and the thoughtfulness behind its design. Keep up the fantastic work! Best, Jane",
+        "timestamp": "2023-10-04T14:32:00Z",
+        "category": "feedback"
+    },
+    {
+        "id": "gen-support_request-1",
+        "from": "jane.doe@example.com",
+        "body": "Dear Support Team, I hope this message finds you well. I am currently having trouble logging into my account. I have tried resetting my password, but I am still unable to access my account. Could you please assist me with this? If there are any steps I need to follow, do let me know. Thank you for your help! Best regards, Jane Doe",
+        "timestamp": "2023-10-10T14:30:00Z",
+        "category": "support_request"
+    },
+    {
+        "id": "gen-support_request-2",
+        "from": "jane.doe@example.com",
+        "body": "Hi Support Team, I hope you can help me. I am having trouble accessing my account. I forgot my password, and when I try to reset it, I don\u2019t receive any email in my inbox. I\u2019ve checked my spam folder too. Could you please assist me in recovering my account? If you need any further information from my side, please let me know. Thank you for your help! Best regards, Jane Doe",
+        "timestamp": "2023-10-05T14:32:00Z",
+        "category": "support_request"
+    },
+    {
+        "id": "gen-support_request-3",
+        "from": "jane.doe@example.com",
+        "body": "Dear Support Team, I hope this message finds you well. I am experiencing issues logging into my account. Every time I try to log in, it displays an error message saying 'Invalid credentials,' even though I am sure I am using the correct username and password. I have tried resetting my password, but I did not receive the reset email despite checking my inbox and spam folder. Could you please assist me in resolving this issue? Thank you for your help! Best regards, Jane Doe",
+        "timestamp": "2023-10-05T14:32:00Z",
+        "category": "support_request"
+    },
+    {
+        "id": "gen-support_request-4",
+        "from": "jane.doe@example.com",
+        "body": "Dear Support Team, I hope this message finds you well. I'm having trouble logging into my account. I've tried resetting my password, but I still can\u2019t access my profile. Can you please guide me on how to resolve this issue? Additionally, I would like to update my payment information but am unsure how to navigate the settings after I regain access. Thank you for your assistance! Best regards, Jane Doe",
+        "timestamp": "2023-10-13T14:30:00Z",
+        "category": "support_request"
+    },
+    {
+        "id": "gen-other-1",
+        "from": "jane.doe@company.com",
+        "body": "Hi Team, I hope this message finds you well. As we prepare for the upcoming project, I wanted to reach out to discuss potential collaboration opportunities that could enhance our efforts. Your expertise in this area would be invaluable, and I believe that by working together, we could achieve great results. Would you be available for a meeting next week to brainstorm ideas and align our goals? Please let me know your availability, and I will set up a time that works for everyone. Looking forward to your thoughts! Best regards, Jane Doe Partnership Manager Company Name",
+        "timestamp": "2023-10-15T09:45:00Z",
+        "category": "other"
+    },
+    {
+        "id": "gen-other-2",
+        "from": "jane.doe@company.com",
+        "body": "Hi Team, I hope this message finds you well! I'm reaching out to discuss an exciting opportunity for potential collaboration on our upcoming marketing webinar scheduled for next month. We believe your expertise in digital marketing would add tremendous value to our event. We would love to discuss this further and explore how we can work together to make this event a success. Could we schedule a call next week to brainstorm ideas? Looking forward to your thoughts! Best regards, Jane Doe Marketing Manager Company Inc.",
+        "timestamp": "2023-10-01T10:30:00Z",
+        "category": "other"
+    },
+    {
+        "id": "gen-other-3",
+        "from": "jane.doe@company.com",
+        "body": "Dear Team, I hope this message finds you well. I wanted to reach out to discuss potential collaboration opportunities that could benefit both our teams. As we continue to explore innovative solutions in our respective fields, I believe joining forces could lead to some exciting developments. Please let me know your availability for a short meeting next week. I look forward to hearing from you soon. Best regards, Jane Doe Project Manager Company XYZ",
+        "timestamp": "2023-10-10T14:30:00Z",
+        "category": "other"
+    },
+    {
+        "id": "gen-other-4",
+        "from": "john.doe@internalcompany.com",
+        "body": "Dear Team, I hope this message finds you well. I would like to schedule a collaboration meeting next week to discuss our ongoing projects and potential opportunities for further partnership. Please let me know your availability for Tuesday or Thursday afternoon. Looking forward to hearing from you soon. Best regards, John Doe Project Manager Internal Company",
+        "timestamp": "2023-10-10T10:30:00Z",
+        "category": "other"
+    }
+]
+```
+---
+## Email Response Prompts
 
+I started with the basic email response prompts as shown below:
+```text
+Generate a response to the following email based on the classification: The email should be classified as **inquiry**. This is because the sender is seeking to explore a potential partnership and is asking to schedule a call to discuss further, which indicates a request for information or discussion rather than a complaint, feedback, support request, or other types of correspondence.
 
-def create_urgent_ticket(email_id: str, category: str, context: str):
-    """Mock function to simulate creating an urgent ticket"""
-    logger.info(f"Creating urgent ticket for email {email_id}")
-    # In real implementation: integrate with ticket system
+Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
+```
+Again, the challenge with the first version of the prompt was that the response was not standardized making it difficult to extract from the LLM model. Hence, I added the response standadization and the next version of the prompt is shown below:
+```text
+Generate a response to the following email based on the classification: The email should be classified as **inquiry**. This is because the sender is seeking to explore a potential partnership and is asking to schedule a call to discuss further, which indicates a request for information or discussion rather than a complaint, feedback, support request, or other types of correspondence.
 
+Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
 
-def create_support_ticket(email_id: str, context: str):
-    """Mock function to simulate creating a support ticket"""
-    logger.info(f"Creating support ticket for email {email_id}")
-    # In real implementation: integrate with ticket system
+Response should comprise the text body of the email. 
+Please provide the response in a json format (dictionary) with key 'email_body': response.
+```
+Finally, I noticed that the email template contained certain placeholder information that was not provided in the prompt. This information was filled in the 3rd version as shown below. Furthermore, it was segregagted based on customer request and internal team/external collaborators request.
 
+```
+Generate a response to the following email based on the classification: other
 
-def log_customer_feedback(email_id: str, feedback: str):
-    """Mock function to simulate logging customer feedback"""
-    logger.info(f"Logging feedback for email {email_id}")
-    # In real implementation: integrate with feedback system
+Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
 
+Response should comprise the text body of the email. 
+Please provide the response in a json format (dictionary) with key 'email_body': response.
 
-def run_demonstration():
-    """Run a demonstration of the complete system."""
-    # Initialize the system
-    processor = EmailProcessor()
-    automation_system = EmailAutomationSystem(processor)
-
-    # Process all sample emails
-    results = []
-    for email in sample_emails:
-        logger.info(f"\nProcessing email {email['id']}...")
-        result = automation_system.process_email(email)
-        results.append(result)
-
-    # Create a summary DataFrame
-    df = pd.DataFrame(results)
-    print("\nProcessing Summary:")
-    print(df[["email_id", "success", "classification", "response_sent"]])
-
-    return df
-
-
-# Example usage:
-if __name__ == "__main__":
-    results_df = run_demonstration()
+if the requestor is a customer, please address them as Dear Valued Customer. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Customer Support team.
+if the requestor is a internal team member or an external collaborator, please address them as Dear Sir/Madam. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Business Development team.
 ```
 
-## Evaluation Criteria
+## Final Output
+After iterative tuning of both classification and response prompts:
+- Categories are accurately classified
+- Emails are responded to with contextual empathy and formatting
+- System is extensible with more few-shot examples or API chaining
 
-### 1. Code Quality (25%)
-- Clean, well-documented code
-- Proper error handling
-- Modular design
-- Appropriate use of Python best practices
+## Conclusion
+This project has been a fantastic opportunity to think through how LLMs can be practically applied to business communication flows. Thank you to the founders of Cadre.AI for designing such a thoughtful assignment. I’m excited by the culture and mission of Cadre AI and would be honored to contribute to your next phase of growth.
 
-### 2. LLM Integration (25%)
-- Effective prompt design
-- Proper handling of API calls
-- Error handling
-
-### 3. Prompt Engineering (25%)
-- Clear documentation of prompt iterations
-- Handling of edge cases
-- Reasoning about improvements
-
-### 4. System Design (25%)
-- Modularity and extensibility
-- Logging and monitoring
-- Error recovery strategies
-
-## Submission Requirements
-1. Your completed code with:
-   - Working implementation
-   - Documentation of your approach
-   - Examples run
-2. Documentation of your prompt iterations, including:
-   - Initial prompts
-   - Problems encountered
-   - Improvements made
-3. A brief summary covering:
-   - Your design decisions
-   - Challenges encountered
-   - Potential improvements
-   - Production considerations
-
-## Notes and Tips
-- Start with a simple implementation and iterate
-- Document your prompt engineering process
-- Consider edge cases in email content
-- Test with diverse email examples
-- Document any assumptions made
-
-Good luck!
+## Contact
+Vidish Mehta
+Cornell MBA | AI Systems

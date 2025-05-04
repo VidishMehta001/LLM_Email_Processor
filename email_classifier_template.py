@@ -54,7 +54,6 @@ sample_emails = [
     }
 ]
 
-
 class EmailProcessor:
     def __init__(self):
         """Initialize the email processor with OpenAI API key."""
@@ -76,7 +75,50 @@ class EmailProcessor:
         2. Make the API call with appropriate error handling
         3. Validate and return the classification
         """
-        pass
+        try:
+            #Query few shot samples
+            with open("generated_samples.json", 'r', encoding='utf-8') as f:
+                res = str(json.load(f))
+
+            # Initial prompt
+            prompt = f"""
+            Imagine you are a email classifier. Please classify the email below according to the provided categories.
+
+            Provided categories: {self.valid_categories}
+    
+            Email: {email}
+
+            Please find several examples with category provided in the "category" key: {res}
+
+            Provide a JSON format (dictinonary) with key as classification and value as the valid category classified to. Please only provide this and no other writeups.
+            If the email is not from a customer, it belong to other category - for instance if the email is from internal teams, external collaborators or partnerships.
+            """
+
+            # Saving prompt information to classify_prompt_v1
+            with open ("classify_prompt_v5.txt", 'w') as f:
+                f.write(prompt)
+
+            # Generating the response - api call to chat gpt open ai
+            response = self.client.chat.completions.create(
+                messages=[
+                    {"role":"system", "content": "Imagine you are an expert at classifying emails"},
+                    {"role": "user", "content": prompt}
+                ],
+                model="gpt-4o-mini",
+                response_format={"type":"json_object"}
+            )
+
+            # Json object documenting the response from the LLM models - in terms of classification
+            response_json = response.choices[0].message.content
+            # Load the response in json format
+            response_json = json.loads(response_json)
+            # Get the classification results
+            classification = response_json['classification']
+            # Log the classification results
+            logger.info(f"Final classification for the email: {classification}")
+            return classification
+        except Exception as e:
+            logger.error(f"Error classifying the email: {str(e)}")
 
     def generate_response(self, email: Dict, classification: str) -> Optional[str]:
         """
@@ -87,7 +129,54 @@ class EmailProcessor:
         2. Implement appropriate response templates
         3. Add error handling
         """
-        pass
+        try:
+            # Initial prompt
+            prompt = f"""
+            Generate a response to the following email based on the classification: {classification}
+
+            Email: {email}
+            
+            Response should comprise the text body of the email. 
+            Please provide the response in a json format (dictionary) with key 'email_body': response.
+
+            if the requestor is a customer, please address them as Dear Valued Customer. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Customer Support team.
+            if the requestor is a internal team member or an external collaborator, please address them as Dear Sir/Madam. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Business Development team.
+            """
+
+            # Log the response prompt version 1
+            with open("response_prompt_v3.txt", 'w') as f:
+                f.write(prompt)
+
+            # Generating the response - api call to chat gpt
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content":"Imagine you are an expert at replying to customer support emails"},
+                    {"role": "user", "content": prompt}
+                    ],
+                response_format={"type":"json_object"}
+            )
+
+            # Parse the response
+            response_json = response.choices[0].message.content
+            # Load the response into json
+            response_json = json.loads(response_json)
+            # Parse the response text
+            response_text = response_json['email_body']
+            # Remove line breaks.
+            response_text = response_text.replace("\n\n", " ")
+            response_text = response_text.replace("\n", " ")
+
+            # clean response text
+            response_text = " ".join(response_text.split())
+
+            # Log the response provided by the LLM
+            logger.info(response_text)
+            return response_text
+        
+        except Exception as e:
+            logger.error(f"Error generating response to the email: {str(e)}")
+            return None
 
 
 class EmailAutomationSystem:
@@ -112,42 +201,159 @@ class EmailAutomationSystem:
         2. Add appropriate error handling
         3. Return processing results
         """
-        pass
+
+        try:
+            # Step 1: Classifying the email
+            classification = self.processor.classify_email(email=email)
+            if not classification:
+                raise ValueError("Error classifying the email")
+            
+            # Step 2: Generating the response
+            response = self.processor.generate_response(email=email, classification=classification)
+            if not response:
+                raise ValueError("Error generating the response to the email")
+            
+            # Step 3: Query the appropriate handler
+            handler = self.response_handlers.get(classification)
+            if not handler:
+                raise ValueError("Error querying the appropriate handler")
+
+            # Step 4: Run the handler 
+            res = handler(email=email)
+
+            # Step 5: Log the results 
+            #  print(df[["email_id", "success", "classification", "response_sent"]])
+            results = {
+                "email_id": email['id'],
+                "success": "Yes",
+                "classification": classification,
+                "response_sent": response
+            }
+
+            return results
+        
+        except Exception as e:
+            logger.error(f"Error processing emails: {str(e)}") 
+            results = {
+                "email_id": email['id'],
+                "success": "No",
+                "classification": str(e),
+                "response": str(e)
+            }
+            return results
 
     def _handle_complaint(self, email: Dict):
         """
         Handle complaint emails.
         TODO: Implement complaint handling logic
         """
-        pass
+        try:
+            # Generate the response
+            response = self.processor.generate_response(email=email, classification="complaint")
+            if not response:
+                raise ValueError("Failed to generate response")
+            
+            # Send the resposne
+            send_complaint_response(email_id=email['id'], response=response)
+
+            # Create urgent ticket 
+            create_urgent_ticket(email_id=email['id'], category="complaint", context=email['body'])
+
+            return None
+        
+        except Exception as e:
+            logger.error(f"Error in processing complaints: {str(e)}")
+            return None
 
     def _handle_inquiry(self, email: Dict):
         """
         Handle inquiry emails.
         TODO: Implement inquiry handling logic
         """
-        pass
+        try:
+            # Generate the response
+            response = self.processor.generate_response(email=email, classification="inquiry")
+            if not response:
+                raise ValueError("Failed to generate response")
+            
+            # Send the standard resposne
+            send_standard_response(email_id=email['id'], response=response)
+
+            # Create support ticket
+            create_support_ticket(email_id=email['id'], context=email['body'])
+
+            return None
+        
+        except Exception as e:
+            logger.error(f"Error in processing inquiry: {str(e)}")
+            return None
 
     def _handle_feedback(self, email: Dict):
         """
         Handle feedback emails.
         TODO: Implement feedback handling logic
         """
-        pass
+        try:
+            # Generate the response
+            response = self.processor.generate_response(email=email, classification="feedback")
+            if not response:
+                raise ValueError("Failed to generate response")
+            
+            # Send the resposne
+            send_standard_response(email_id=email['id'], response=response)
+
+            # Log customer feedback
+            log_customer_feedback(email_id=email['id'], feedback=email['body'])
+
+            return None
+        
+        except Exception as e:
+            logger.error(f"Error in processing feedback: {str(e)}")
+            return None
 
     def _handle_support_request(self, email: Dict):
         """
         Handle support request emails.
         TODO: Implement support request handling logic
         """
-        pass
+        try:
+            # Generate the response
+            response = self.processor.generate_response(email=email, classification="support_request")
+            if not response:
+                raise ValueError("Failed to generate response")
+            
+            # Send the resposne
+            send_standard_response(email_id=email['id'], response=response)
+
+            # Create a support ticket
+            create_support_ticket(email_id=email['id'], context=email['body'])
+            
+            return None
+        
+        except Exception as e:
+            logger.error(f"Error in processing support request: {str(e)}")
+            return None
+
 
     def _handle_other(self, email: Dict):
         """
         Handle other category emails.
         TODO: Implement handling logic for other categories
         """
-        pass
+        try:
+            # Generate the response
+            response = self.processor.generate_response(email=email, classification="other")
+            if not response:
+                raise ValueError("Failed to generate response")
+            
+            # Send the resposne
+            send_standard_response(email_id=email['id'], response=response)
+    
+            return None
+        
+        except Exception as e:
+            logger.error(f"Error in processing support request: {str(e)}")
+            return None
 
 # Mock service functions
 def send_complaint_response(email_id: str, response: str):
@@ -197,6 +403,8 @@ def run_demonstration():
     df = pd.DataFrame(results)
     print("\nProcessing Summary:")
     print(df[["email_id", "success", "classification", "response_sent"]])
+    # save results to a csv file
+    df.to_csv("results.csv")
 
     return df
 

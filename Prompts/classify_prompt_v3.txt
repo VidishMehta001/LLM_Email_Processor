@@ -1,0 +1,9 @@
+
+            Imagine you are a email classifier. Please classify the email below according to the provided categories.
+
+            Provided categories: {'support_request', 'complaint', 'other', 'inquiry', 'feedback'}
+    
+            Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
+
+            Provide a JSON format (dictinonary) with key as classification and value as the valid category classified to. Please only provide this and no other writeups.
+            

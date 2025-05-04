@@ -249,6 +249,10 @@ If the email is not from a customer, it belong to other category - for instance 
     }
 ]
 ```
+The final results are classified correctly as shown below:
+
+<img src="images/Results.png"></img>
+
 ---
 ## Email Response Prompts
 

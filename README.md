@@ -67,7 +67,7 @@ Provided categories: {'complaint', 'feedback', 'support_request', 'other', 'inqu
 
 Email: {'id': '005', 'from': 'business.client@example.com', 'subject': 'Partnership opportunity', 'body': 'Our company is interested in exploring potential partnership opportunities with your organization. Would it be possible to schedule a call next week to discuss this further?', 'timestamp': '2024-03-15T15:00:00Z'}
 ```
-The challenge with this prompt was that the response was provided in the free text format. Thus there was a need to standardize the output to a fixed format for easier processing of the downstream information. Hence, I developed a version 2 with response standardization instruction for the LLM model. Below is the version 2 of the model
+The challenge with this prompt was that the response was provided in the free text format. Thus there was a need to standardize the output to a fixed format for easier processing of the downstream information. Hence, I developed a version 2 with response standardization instruction for the LLM model. Below is the version 2 of the prompt
 ```text
 Imagine you are a email classifier. Please classify the email below according to the provided categories.
 

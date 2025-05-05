@@ -69,22 +69,17 @@ class EmailProcessor:
         """
         Classify an email using LLM.
         Returns the classification category or None if classification fails.
-        
-        TODO: 
-        1. Design and implement the classification prompt
-        2. Make the API call with appropriate error handling
-        3. Validate and return the classification
         """
         try:
             #Query few shot samples
-            with open("generated_samples.json", 'r', encoding='utf-8') as f:
+            with open("synthetic_samples/generated_samples.json", 'r', encoding='utf-8') as f:
                 res = str(json.load(f))
 
             # Initial prompt
             prompt = f"""
             Imagine you are a email classifier. Please classify the email below according to the provided categories.
 
-            Provided categories: {self.valid_categories}
+            Provided categories: {list(self.valid_categories)}
     
             Email: {email}
 
@@ -95,8 +90,11 @@ class EmailProcessor:
             """
 
             # Saving prompt information to classify_prompt_v1
-            with open ("classify_prompt_v5.txt", 'w') as f:
-                f.write(prompt)
+            # with open ("classify_prompt_v5.txt", 'w') as f:
+            #     f.write(prompt)
+
+            # Auto versioning up the classify prompt
+            save_file_version(filename=f"classify_prompt_{str(email['id'])}", folder="Prompts", filedata=prompt)
 
             # Generating the response - api call to chat gpt open ai
             response = self.client.chat.completions.create(
@@ -123,11 +121,6 @@ class EmailProcessor:
     def generate_response(self, email: Dict, classification: str) -> Optional[str]:
         """
         Generate an automated response based on email classification.
-        
-        TODO:
-        1. Design the response generation prompt
-        2. Implement appropriate response templates
-        3. Add error handling
         """
         try:
             # Initial prompt
@@ -144,8 +137,11 @@ class EmailProcessor:
             """
 
             # Log the response prompt version 1
-            with open("response_prompt_v3.txt", 'w') as f:
-                f.write(prompt)
+            # with open("response_prompt_v3.txt", 'w') as f:
+            #     f.write(prompt)
+
+            # Auto versioning up the response prompt
+            save_file_version(filename=f"response_prompt_{str(email['id'])}", folder="Prompts", filedata=prompt)
 
             # Generating the response - api call to chat gpt
             response = self.client.chat.completions.create(
@@ -195,11 +191,6 @@ class EmailAutomationSystem:
         """
         Process a single email through the complete pipeline.
         Returns a dictionary with the processing results.
-        
-        TODO:
-        1. Implement the complete processing pipeline
-        2. Add appropriate error handling
-        3. Return processing results
         """
 
         try:
@@ -245,7 +236,6 @@ class EmailAutomationSystem:
     def _handle_complaint(self, email: Dict):
         """
         Handle complaint emails.
-        TODO: Implement complaint handling logic
         """
         try:
             # Generate the response
@@ -268,7 +258,6 @@ class EmailAutomationSystem:
     def _handle_inquiry(self, email: Dict):
         """
         Handle inquiry emails.
-        TODO: Implement inquiry handling logic
         """
         try:
             # Generate the response
@@ -291,7 +280,6 @@ class EmailAutomationSystem:
     def _handle_feedback(self, email: Dict):
         """
         Handle feedback emails.
-        TODO: Implement feedback handling logic
         """
         try:
             # Generate the response
@@ -314,7 +302,6 @@ class EmailAutomationSystem:
     def _handle_support_request(self, email: Dict):
         """
         Handle support request emails.
-        TODO: Implement support request handling logic
         """
         try:
             # Generate the response
@@ -338,7 +325,6 @@ class EmailAutomationSystem:
     def _handle_other(self, email: Dict):
         """
         Handle other category emails.
-        TODO: Implement handling logic for other categories
         """
         try:
             # Generate the response
@@ -384,6 +370,55 @@ def log_customer_feedback(email_id: str, feedback: str):
     """Mock function to simulate logging customer feedback"""
     logger.info(f"Logging feedback for email {email_id}")
     # In real implementation: integrate with feedback system
+
+def normalize_text(text):
+    import re
+    # Remove excessive whitespaces and normalize set ordering
+    text = re.sub(r'\s+', ' ', text.strip())  # Remove line breaks and extra spaces
+    set_matches = re.findall(r"\{[^{}]*\}", text)
+
+    for match in set_matches:
+        elements = sorted(e.strip() for e in match.strip('{}').split(','))
+        sorted_set = '{' + ', '.join(elements) + '}'
+        text = text.replace(match, sorted_set)
+
+    return text
+
+def save_file_version(filename, folder, filedata):
+    """Function to save prompt file version"""
+    try:
+        # base version of the file
+        version = 0
+
+        # check the latest version of the file in the folder
+        for file in os.listdir(folder):
+            if filename in file:
+                current_version = int(file.split(".")[0].split("_")[-1][1:])
+                version = max(version, current_version)
+
+        # compare the latest file to the new filedata provided - if no change exit out of the function
+        if version != 0: # If there is a file in the folder - only then do the comparison. 
+            with open(f"{folder}/{filename}_v{version}.txt", 'r') as f:
+                data = normalize_text(f.read())
+
+            if data == normalize_text(filedata):
+                logger.info("There were no changes made to the prompts!")
+                return None
+
+        # Increment the version by 1 and create a new filename
+        new_version  = str(version + 1)
+        new_filename = f"{filename}_v{new_version}"
+
+        # New file created with the updated prompt
+        with open(f"{folder}/{new_filename}.txt", 'w', encoding='utf-8') as f:
+            f.write(filedata)
+
+        return None
+    
+    except Exception as e:
+        # log error during upgrading the version of the file
+        logger.info(f"Error upgrading the version of the file {filename}: {str(e)}")
+        return None
 
 
 def run_demonstration():

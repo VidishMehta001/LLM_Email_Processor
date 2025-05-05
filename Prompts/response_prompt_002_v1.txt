@@ -1,0 +1,11 @@
+
+            Generate a response to the following email based on the classification: inquiry
+
+            Email: {'id': '002', 'from': 'curious.shopper@example.com', 'subject': 'Question about product specifications', 'body': "Hi, I'm interested in buying your premium package but I couldn't find information about whether it's compatible with Mac OS. Could you please clarify this? Thanks!", 'timestamp': '2024-03-15T11:45:00Z'}
+            
+            Response should comprise the text body of the email. 
+            Please provide the response in a json format (dictionary) with key 'email_body': response.
+
+            if the requestor is a customer, please address them as Dear Valued Customer. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Customer Support team.
+            if the requestor is a internal team member or an external collaborator, please address them as Dear Sir/Madam. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Business Development team.
+            

@@ -1,0 +1,11 @@
+
+            Generate a response to the following email based on the classification: complaint
+
+            Email: {'id': '001', 'from': 'angry.customer@example.com', 'subject': 'Broken product received', 'body': "I received my order #12345 yesterday but it arrived completely damaged. This is unacceptable and I demand a refund immediately. This is the worst customer service I've experienced.", 'timestamp': '2024-03-15T10:30:00Z'}
+            
+            Response should comprise the text body of the email. 
+            Please provide the response in a json format (dictionary) with key 'email_body': response.
+
+            if the requestor is a customer, please address them as Dear Valued Customer. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Customer Support team.
+            if the requestor is a internal team member or an external collaborator, please address them as Dear Sir/Madam. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Business Development team.
+            

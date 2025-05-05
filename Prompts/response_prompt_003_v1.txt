@@ -1,0 +1,11 @@
+
+            Generate a response to the following email based on the classification: feedback
+
+            Email: {'id': '003', 'from': 'happy.user@example.com', 'subject': 'Amazing customer support', 'body': 'I just wanted to say thank you for the excellent support I received from Sarah on your team. She went above and beyond to help resolve my issue. Keep up the great work!', 'timestamp': '2024-03-15T13:15:00Z'}
+            
+            Response should comprise the text body of the email. 
+            Please provide the response in a json format (dictionary) with key 'email_body': response.
+
+            if the requestor is a customer, please address them as Dear Valued Customer. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Customer Support team.
+            if the requestor is a internal team member or an external collaborator, please address them as Dear Sir/Madam. In the sign off, mention name as Vidish Mehta, company as Cornell University, Contact Information as +1 123 456 789 and Business Development team.
+            

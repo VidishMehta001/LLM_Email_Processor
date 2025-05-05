@@ -1,7 +1,7 @@
 # LLM based Email Classifier
 
 ## Acknowledgment
-I would like to thank Cadre.AI team for providing me this assignment - amazed by the work the founding team has done in delivering AI powered solutions across various industries. More on them can be found <a href-"https://www.gocadre.ai/">here</a>.
+I would like to thank Cadre.AI team for providing me this assignment - amazed by the work the founding team has done in delivering AI powered solutions across various industries. More on them can be found <a href="https://www.gocadre.ai/">here</a>.
 
 ## Project Context
 As part of the Cadre.AI assignment, I am tasked with building an email classification and automation system using Large Language Models (LLMs). The system is required to:
